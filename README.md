@@ -1,84 +1,124 @@
-# Flood Assessment App — Backend
+# Flood Assessment App — Backend API
 
-Laravel REST API for the Madison County Flood Damage Assessment application.
+REST API backend for the Madison County Flood Damage Assessment application, 
+built for Ceres to digitize the flood damage assessment process for chicken farms.
 
 ## Tech Stack
 - Laravel 13
-- MySQL 8
-- Laravel Sanctum (Authentication)
 - PHP 8.4
+- MySQL 8
+- Laravel Sanctum (Token Authentication)
 
-## Setup Instructions
-
-### Requirements
+## Requirements
 - PHP 8.2+
 - Composer
 - MySQL
-- XAMPP or Laravel Herd
+- XAMPP
 
-### Installation
+## Installation & Setup
 
-1. Clone the repository
+### Step 1 — Clone Repository
 ```bash
-   git clone https://github.com/YOUR_USERNAME/flood-assessment-app.git
-   cd flood-assessment-backend
+git clone https://github.com/Shwetha-Developer/flood-assessment-backend.git
+cd flood-assessment-backend
 ```
 
-2. Install dependencies
+### Step 2 — Install Dependencies
 ```bash
-   composer install
+composer install
 ```
 
-3. Copy environment file
+### Step 3 — Environment Setup
 ```bash
-   cp .env.example .env
-   php artisan key:generate
+cp .env.example .env
+php artisan key:generate
 ```
 
-4. Configure `.env`
+### Step 4 — Configure `.env`
 ```env
-   DB_DATABASE=flood_assessment
-   DB_USERNAME=root
-   DB_PASSWORD=
-   FRONTEND_URL=http://localhost:3000
-   SANCTUM_STATEFUL_DOMAINS=localhost:3000
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=flood_assessment
+DB_USERNAME=root
+DB_PASSWORD=
+
+SANCTUM_STATEFUL_DOMAINS=localhost:3000
+FRONTEND_URL=http://localhost:3000
 ```
 
-5. Create database and run migrations
+### Step 5 — Create Database
+Open phpMyAdmin and run:
+```sql
+CREATE DATABASE flood_assessment;
+```
+
+### Step 6 — Run Migrations
 ```bash
-   php artisan migrate
-   php artisan db:seed --class=UserSeeder
+php artisan migrate
 ```
 
-6. Start the server
+### Step 7 — Seed Default Users
 ```bash
-   php artisan serve
+php artisan db:seed --class=UserSeeder
 ```
 
-## API Endpoints
+### Step 8 — Start Server
+```bash
+php artisan serve
+```
+API runs at: `http://127.0.0.1:8000`
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | /api/login | Login |
-| POST | /api/logout | Logout |
-| GET | /api/me | Current user |
-| GET | /api/assessments | Get all assessments |
-| POST | /api/assessments | Create assessment |
-| POST | /api/assessments/batch-sync | Batch sync offline data |
-| POST | /api/assessments/{id}/photos | Upload photos |
-| GET | /api/export/csv | Export CSV |
-
-## Default Users
+## Default Login Credentials
 
 | Role | Email | Password |
 |------|-------|----------|
 | Supervisor | supervisor@ceres.com | password123 |
 | Assessor | assessor@ceres.com | password123 |
 
-## Assumptions
+## API Endpoints
 
-1. Assessors use modern smartphones with Chrome browser
-2. Login requires internet — app works fully offline after login
-3. Photos stored as Base64 and saved to local storage
-4. Duplicate prevention using UUID local_id
-5. Supervisor can see all assessments, assessors see only their own
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | /api/login | No | Login |
+| POST | /api/logout | Yes | Logout |
+| GET | /api/me | Yes | Current user |
+| GET | /api/assessments | Yes | Get assessments |
+| POST | /api/assessments | Yes | Create assessment |
+| POST | /api/assessments/batch-sync | Yes | Sync offline data |
+| POST | /api/assessments/{id}/photos | Yes | Upload photo |
+| GET | /api/photos/{id} | Yes | Get photo |
+| GET | /api/export/csv | Yes | Export CSV |
+
+## Assumptions Made
+
+1. Assessors use Chrome browser on smartphones
+2. Login requires internet — app works offline after login
+3. One photo per assessment for reliability
+4. Photos stored as Base64 in MySQL database
+5. Supervisors see all assessments, assessors see only their own
+6. Token never expires so assessors stay logged in all day
+7. Data is specific to Madison County, NC
+
+## Architecture & Design Decisions
+
+### REST API Only
+Laravel acts as a pure JSON REST API.
+No Blade templates — React handles all UI.
+
+### Duplicate Prevention
+Every assessment has a UUID (local_id) generated offline.
+Laravel checks local_id before inserting to prevent duplicates
+when sync runs multiple times.
+
+### Batch Sync
+Single endpoint accepts array of assessments.
+Reduces API calls when assessor has multiple offline records.
+
+### Photo Storage
+Photos compressed in React then stored as Base64 in MySQL.
+Avoids file system complexity and permission issues.
+
+### Role Based Access
+- Assessor → sees only their own records
+- Supervisor → sees all records + can export CSV
